@@ -1,0 +1,4 @@
+flask
+gitpython
+markdown
+python-magic

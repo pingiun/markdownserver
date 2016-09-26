@@ -1,12 +1,45 @@
 import os
 import hashlib
+import hmac
+import json
 
 import markdown
-from flask import Flask
-from flask import Markup
-from flask import render_template
+import git
+import magic
+
+from flask import Flask, request, Markup, Response, render_template
 
 app = Flask(__name__)
+
+app.config.from_envvar('MARKDOWNSERVER_SETTINGS')
+
+
+@app.route('/_/githubwebhook', methods=['GET', 'POST'])
+def handle_webhook():
+    if request.method == 'GET':
+        return 'Method Not Allowed', 405
+
+    payload = json.loads(request.data.decode('utf-8'))
+
+    if 'GITHUB_SHARED_SECRET' in app.config:
+        if not request.headers.get('X-Hub-Signature'):
+            return 'Unauthorized', 401
+        hmacdigest = hmac.new(app.config['GITHUB_SHARED_SECRET'],
+                              request.data).hexdigest()
+        if hmac.compare_digest(hmacdigest,
+                               request.headers.get('X-Hub-Signature')) == False:
+            return 'Unauthorized', 401
+
+    if request.headers.get('X-GitHub-Event') == 'ping':
+        return json.dumps({'msg': 'pong'})
+
+    if request.headers.get('X-Github-Event') != 'push':
+        return 'Bad Request', 400
+
+    g = git.cmd.Git('templates')
+    print(g.pull())
+    return 'OK', 200
+
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -22,15 +55,27 @@ def catch_all(path):
 
     if ext == 'md':
         try:
-            return open(Cache.get_instance().get_file(app.config['SERVER_NAME'], path)).read()
+            return open(Cache.get_instance().get_file(path)).read()
         except FileNotFoundError:
             return 'Not found', 404
     else:
         try:
-            with open(os.path.join('content', path), 'rb') as f:
-                return f.read()
+
+            def generate():
+                with open(os.path.join('templates', path), 'rb') as f:
+                    while True:
+                        data = f.read(4096)
+                        if not data:
+                            break
+                        yield data
+
+            mime = magic.Magic(mime=True)
+            return Response(
+                generate(),
+                mimetype=mime.from_file(os.path.join('templates', path)))
         except FileNotFoundError:
             return 'Not found', 404
+
 
 class Cache(object):
 
@@ -38,6 +83,7 @@ class Cache(object):
 
     def __init__(self):
         self.hashes = dict()
+        os.makedirs('cache', exist_ok=True)
 
     @classmethod
     def get_instance(cls):
@@ -56,16 +102,18 @@ class Cache(object):
             sha1.update(data)
         return sha1.digest()
 
-    def get_file(self, base, path):
-        with open(os.path.join(base, 'content', path), 'rb') as file:
+    def get_file(self, path):
+        with open(os.path.join('templates', path), 'rb') as file:
             filehash = Cache._get_hash(file)
         if path in self.hashes:
-            if filehash == self.hashes[path]: # File not changed
-                return os.path.join(base, 'cache', path)
-        
-        with open(os.path.join(base, 'content', path), 'r') as inputfile:
+            if filehash == self.hashes[path]:  # File not changed
+                return os.path.join('cache', path)
+
+        with open(os.path.join('templates', path), 'r') as inputfile:
             content = Markup(markdown.markdown(inputfile.read()))
-            with open(os.path.join(base, 'cache', path), 'w') as outputfile:
-                outputfile.write(render_template('template.html', content=content))
+            with open(os.path.join('cache', path), 'w') as outputfile:
+                outputfile.write(
+                    render_template(
+                        'template.html', content=content))
         self.hashes[path] = filehash
-        return os.path.join(base, 'cache', path)
+        return os.path.join('cache', path)
