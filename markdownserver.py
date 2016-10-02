@@ -1,6 +1,7 @@
 import os
 import hashlib
 import hmac
+import hashlib
 import json
 
 import markdown
@@ -24,8 +25,8 @@ def handle_webhook():
     if 'GITHUB_SHARED_SECRET' in app.config:
         if not request.headers.get('X-Hub-Signature'):
             return 'Unauthorized', 401
-        hmacdigest = hmac.new(app.config['GITHUB_SHARED_SECRET'],
-                              request.data).hexdigest()
+        hmacdigest = 'sha1=' + hmac.new(app.config['GITHUB_SHARED_SECRET'],
+                              request.data, hashlib.sha1).hexdigest()
         if hmac.compare_digest(hmacdigest,
                                request.headers.get('X-Hub-Signature')) == False:
             return 'Unauthorized', 401
