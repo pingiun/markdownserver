@@ -4,11 +4,9 @@ import hmac
 import hashlib
 import json
 
-import markdown
 import git
-import magic
 
-from flask import Flask, request, Markup, Response, render_template
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -39,6 +37,6 @@ def handle_webhook():
 
     g = git.cmd.Git(app.config['GIT_REPO'])
     print(g.pull())
-    if 'POST_PULL' in app.config
+    if 'POST_PULL' in app.config:
         print(subprocess.check_output(app.config['POST_PULL']))
     return 'OK', 200
