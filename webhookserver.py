@@ -1,3 +1,4 @@
+import os
 import subprocess
 import hashlib
 import hmac
@@ -35,6 +36,7 @@ def handle_webhook():
     if request.headers.get('X-Github-Event') != 'push':
         return 'Bad Request', 400
 
+    os.chdir(app.config['GIT_REPO'])
     g = git.cmd.Git(app.config['GIT_REPO'])
     print(g.pull())
     if 'POST_PULL' in app.config:
