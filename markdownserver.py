@@ -37,9 +37,12 @@ def handle_webhook():
     if request.headers.get('X-Github-Event') != 'push':
         return 'Bad Request', 400
 
-    g = git.cmd.Git('templates')
+    os.chdir(app.config['GIT_REPO'])
+    g = git.cmd.Git(app.config['GIT_REPO'])
     print(g.pull())
-    return 'OK', 200
+    if 'POST_PULL' in app.config:
+        print(subprocess.check_output(app.config['POST_PULL']))
+return 'OK', 200
 
 
 @app.route('/', defaults={'path': ''})
