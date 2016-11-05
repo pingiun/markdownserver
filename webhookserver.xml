@@ -1,6 +1,6 @@
 <uwsgi>
     <plugin>python3</plugin>
-    <socket>/run/uwsgi/app/markdownserver.socket</socket>
+    <socket>/run/uwsgi/app/webhookserver.socket</socket>
     <pythonpath>/srv/www/markdownserver/</pythonpath>
     <chdir>/srv/www/markdownserver/</chdir>
     <app mountpoint="/">
