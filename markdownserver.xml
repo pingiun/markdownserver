@@ -5,7 +5,7 @@
     <chdir>/srv/www/markdownserver/</chdir>
     <app mountpoint="/">
 
-        <script>webhookserver:app</script>
+        <script>markdownserver:app</script>
 
     </app>
     <env>MARKDOWNSERVER_SETTINGS=settings.cfg</env>
