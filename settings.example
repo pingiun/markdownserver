@@ -1,0 +1,3 @@
+GITHUB_SHARED_SECRET = b"supersecret"
+GIT_REPO = "/var/www/html/"
+POST_PULL = "/var/www/html/hugo"
